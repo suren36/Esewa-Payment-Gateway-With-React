@@ -16,12 +16,13 @@ export const HomePage = () => {
     failure_url:"http://localhost:5173/PaymentFailed",
     signed_field_names:"total_amount,transaction_uuid,product_code",
     signature :"",
-    secret : "8gBm/:&EnhH.1/q"
 
 
   })
 
 //generate signature
+const [signature, setSignature] = useState("");
+const secret = "8gBm/:&EnhH.1/q"; // Move secret out of state
 
 
 
@@ -31,21 +32,39 @@ const generateSignature = (total_amount, transaction_uuid, product_code ,secret 
     return CryptoJS.enc.Base64.stringify(hash);
   };
 
+  const handleAmountChange =(e) =>{
+    const newAmount = e.target.value;
+
+    const amountNum = parseFloat(newAmount) || 0;
+    const taxNum = parseFloat(formData.tax_amount) || 0;
+    const serviceChargeNum = parseFloat(formData.product_service_charge) || 0;
+    const deliveryChargeNum = parseFloat(formData.product_delivery_charge) || 0;
+
+    // Calculate new total_amount
+    const newTotalAmount = amountNum + taxNum + serviceChargeNum + deliveryChargeNum;
+
+
+    setformData((prev)=>({
+
+      ...prev,amount : newAmount ,
+      total_amount: newTotalAmount.toString(),
+      
+    }))
+  }
+
+  // Recalculate signature when relevant fields change
   useEffect(() => {
-    if (!formData) return;
+    const { total_amount, transaction_uuid, product_code } = formData;
+    const hashedSignature = generateSignature(total_amount, transaction_uuid, product_code, secret);
+  
+    setformData((prev) => ({
+      ...prev,
+      signature: hashedSignature,
+    }));
+  }, [formData.total_amount, formData.transaction_uuid, formData.product_code]);
+  
 
-    const { total_amount, transaction_uuid, product_code, secret } = formData;
-
-    const hasedSignature = generateSignature(
-        total_amount,
-        transaction_uuid,
-        product_code,
-        secret
-    );
-
-    console.log(hasedSignature);
-    setformData({...formData, signature :  hasedSignature})
-}, [formData.total_amount, formData.transaction_uuid, formData.product_code]);  // Added dependency
+  // Update signature field in form data
 
 
 
@@ -62,9 +81,15 @@ const generateSignature = (total_amount, transaction_uuid, product_code ,secret 
           <h1 className="text-4xl font-bold mb-4 text-center text-blue-600">Checkout</h1>
           <div className="mb-4">
             <label htmlFor="amount" className="block text-gray-700 font-bold mb-2">Amount</label>
-            <input type="text" id="amount" name="amount" value={formData.amount}
-              onChange={({target})=> setformData({
-                ...formData,amount:target.value,total_amount:target.value})}
+            <label htmlFor="amount" className="block text-gray-700 font-bold mb-2">
+              Amount
+            </label>
+            <input
+              type="text"
+              id="amount"
+              name="amount"
+              value={formData.amount}
+              onChange={handleAmountChange} // ✅ Use function instead of direct state update
               required
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
@@ -88,7 +113,8 @@ const generateSignature = (total_amount, transaction_uuid, product_code ,secret 
             <label htmlFor="last_name" className="block text-gray-700 font-bold mb-2">Last Name</label>
             <input type="text" id="last_name" name="last_name" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"/>
           </div>
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600">
+          <button  type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600" 
+          >
             Pay via E-sewa
           </button>
         </form>
